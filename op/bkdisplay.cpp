@@ -10,8 +10,7 @@ bkdisplay::bkdisplay()
 	_bind_state = 0;
 	_width = _height = 0;
 	_client_x = _client_y = 0;
-	rect.left = rect.right = 0;
-	rect.top = rect.bottom = 0;
+
 }
 
 
@@ -27,6 +26,7 @@ long bkdisplay::bind_init() {
 	res_size = (rc.right - rc.left)*(rc.bottom - rc.top) * 4;
 	wsprintf(_shared_res_name, SHARED_RES_NAME_FORMAT, _hwnd);
 	wsprintf(_mutex_name, MUTEX_NAME_FORMAT, _hwnd);
+	//setlog(L"mem=%s mutex=%s", _shared_res_name, _mutex_name);
 	//bind_release();
 	try {
 		_shmem = new sharedmem();
@@ -50,7 +50,7 @@ long bkdisplay::bind_release() {
 	return 0;
 }
 
-byte* bkdisplay::get_data() {
-	return _shmem->data<byte>();
-}
+//byte* bkdisplay::get_data() {
+//	return _shmem->data<byte>();
+//}
 

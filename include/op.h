@@ -101,6 +101,12 @@ EXTERN_C const IID IID_IOpInterface;
         virtual /* [id] */ HRESULT STDMETHODCALLTYPE GetBasePath( 
             /* [retval][out] */ BSTR *path) = 0;
         
+        virtual /* [id] */ HRESULT STDMETHODCALLTYPE GetID( 
+            /* [retval][out] */ LONG *ret) = 0;
+        
+        virtual /* [id] */ HRESULT STDMETHODCALLTYPE GetLastError( 
+            /* [retval][out] */ LONG *ret) = 0;
+        
         virtual /* [id] */ HRESULT STDMETHODCALLTYPE SetShowErrorMsg( 
             /* [in] */ LONG show_type,
             /* [retval][out] */ LONG *ret) = 0;
@@ -693,6 +699,14 @@ EXTERN_C const IID IID_IOpInterface;
         /* [id] */ HRESULT ( STDMETHODCALLTYPE *GetBasePath )( 
             IOpInterface * This,
             /* [retval][out] */ BSTR *path);
+        
+        /* [id] */ HRESULT ( STDMETHODCALLTYPE *GetID )( 
+            IOpInterface * This,
+            /* [retval][out] */ LONG *ret);
+        
+        /* [id] */ HRESULT ( STDMETHODCALLTYPE *GetLastError )( 
+            IOpInterface * This,
+            /* [retval][out] */ LONG *ret);
         
         /* [id] */ HRESULT ( STDMETHODCALLTYPE *SetShowErrorMsg )( 
             IOpInterface * This,
@@ -1352,6 +1366,12 @@ EXTERN_C const IID IID_IOpInterface;
 
 #define IOpInterface_GetBasePath(This,path)	\
     ( (This)->lpVtbl -> GetBasePath(This,path) ) 
+
+#define IOpInterface_GetID(This,ret)	\
+    ( (This)->lpVtbl -> GetID(This,ret) ) 
+
+#define IOpInterface_GetLastError(This,ret)	\
+    ( (This)->lpVtbl -> GetLastError(This,ret) ) 
 
 #define IOpInterface_SetShowErrorMsg(This,show_type,ret)	\
     ( (This)->lpVtbl -> SetShowErrorMsg(This,show_type,ret) ) 
