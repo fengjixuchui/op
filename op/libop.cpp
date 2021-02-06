@@ -15,7 +15,7 @@
 #include "MemoryEx.h"
 #include<fstream>
 // OpInterface
-
+std::mutex mtx;
 libop::libop() {
 	_winapi = new WinApi;
 	_bkproc = new bkbase;
@@ -42,17 +42,20 @@ libop::libop() {
 	_vkmap[L"f9"] = VK_F9; _vkmap[L"f10"] = VK_F10;
 	_vkmap[L"f11"] = VK_F11; _vkmap[L"f12"] = VK_F12;
 	//初始化 op 路径 & name
+	
 	static bool is_init = false;
+	mtx.lock();
 	if (!is_init) {
-		g_op_path.resize(512);
-		DWORD real_size = ::GetModuleFileNameW(gInstance, g_op_path.data(), 512);
-		g_op_path.resize(real_size);
+		m_opPath.resize(512);
+		DWORD real_size = ::GetModuleFileNameW(gInstance, m_opPath.data(), 512);
+		m_opPath.resize(real_size);
 
-		g_op_name = g_op_path.substr(g_op_path.rfind(L"\\") + 1);
-		g_op_path = g_op_path.substr(0, g_op_path.rfind(L"\\"));
+		g_op_name = m_opPath.substr(m_opPath.rfind(L"\\") + 1);
+		m_opPath = m_opPath.substr(0, m_opPath.rfind(L"\\"));
 
 		is_init = true;
 	}
+	mtx.unlock();
 }
 
 libop::~libop() {
@@ -136,10 +139,15 @@ long  libop::Sleep(long millseconds, long* ret) {
 }
 
 long  libop::InjectDll(const wchar_t* process_name, const wchar_t* dll_name, long* ret) {
-	//auto proc = _wsto_string(process_name);
-	//auto dll = _wsto_string(dll_name);
-	//Injecter::EnablePrivilege(TRUE);
-	//auto h = Injecter::InjectDll(process_name, dll_name);
+	auto proc = _ws2string(process_name);
+	auto dll = _ws2string(dll_name);
+	long hwnd;
+	FindWindowByProcess(process_name, L"", L"", &hwnd);
+	long pid;
+	GetWindowProcessId(hwnd, &pid);
+	Injecter::EnablePrivilege(TRUE);
+	long error_code = 0;
+	auto h = Injecter::InjectDll(pid, dll_name,error_code);
 	*ret = 0;
 	return S_OK;
 }
@@ -499,7 +507,7 @@ long  libop::BindWindow(long hwnd, const wchar_t* display, const wchar_t* mouse,
 		_bkproc->UnBindWindow();
 	*ret = _bkproc->BindWindow(hwnd, display, mouse, keypad, mode);
 	if (*ret == 1) {
-		_image_proc->set_offset(_bkproc->_pbkdisplay->_client_x, _bkproc->_pbkdisplay->_client_y);
+		//_image_proc->set_offset(_bkproc->_pbkdisplay->_client_x, _bkproc->_pbkdisplay->_client_y);
 	}
 	return S_OK;
 }
@@ -511,92 +519,92 @@ long  libop::UnBindWindow(long* ret) {
 
 long  libop::GetCursorPos(long* x, long* y, long* ret) {
 	
-	*ret = _bkproc->_bkmouse.GetCursorPos(*x, *y);
+	*ret = _bkproc->_bkmouse->GetCursorPos(*x, *y);
 	return S_OK;
 }
 
 long  libop::MoveR(long x, long y, long* ret) {
-	*ret = _bkproc->_bkmouse.MoveR(x, y);
+	*ret = _bkproc->_bkmouse->MoveR(x, y);
 	return S_OK;
 }
 //把鼠标移动到目的点(x,y)
 long  libop::MoveTo(long x, long y, long* ret) {
-	*ret = _bkproc->_bkmouse.MoveTo(x, y);
+	*ret = _bkproc->_bkmouse->MoveTo(x, y);
 	return S_OK;
 }
 
 long  libop::MoveToEx(long x, long y, long w, long h, long* ret) {
-	*ret = _bkproc->_bkmouse.MoveToEx(x, y, w, h);
+	*ret = _bkproc->_bkmouse->MoveToEx(x, y, w, h);
 	return S_OK;
 }
 
 long  libop::LeftClick(long* ret) {
-	*ret = _bkproc->_bkmouse.LeftClick();
+	*ret = _bkproc->_bkmouse->LeftClick();
 	return S_OK;
 }
 
 long  libop::LeftDoubleClick(long* ret) {
-	*ret = _bkproc->_bkmouse.LeftDoubleClick();
+	*ret = _bkproc->_bkmouse->LeftDoubleClick();
 	return S_OK;
 }
 
 long  libop::LeftDown(long* ret) {
-	*ret = _bkproc->_bkmouse.LeftDown();
+	*ret = _bkproc->_bkmouse->LeftDown();
 	return S_OK;
 }
 
 long  libop::LeftUp(long* ret) {
-	*ret = _bkproc->_bkmouse.LeftUp();
+	*ret = _bkproc->_bkmouse->LeftUp();
 	return S_OK;
 }
 
 long  libop::MiddleClick(long* ret) {
-	*ret = _bkproc->_bkmouse.MiddleClick();
+	*ret = _bkproc->_bkmouse->MiddleClick();
 	return S_OK;
 }
 
 long  libop::MiddleDown(long* ret) {
-	*ret = _bkproc->_bkmouse.MiddleDown();
+	*ret = _bkproc->_bkmouse->MiddleDown();
 	return S_OK;
 }
 
 long  libop::MiddleUp(long* ret) {
-	*ret = _bkproc->_bkmouse.MiddleUp();
+	*ret = _bkproc->_bkmouse->MiddleUp();
 	return S_OK;
 }
 
 long  libop::RightClick(long* ret) {
-	*ret = _bkproc->_bkmouse.RightClick();
+	*ret = _bkproc->_bkmouse->RightClick();
 	return S_OK;
 }
 
 long  libop::RightDown(long* ret) {
-	*ret = _bkproc->_bkmouse.RightDown();
+	*ret = _bkproc->_bkmouse->RightDown();
 	return S_OK;
 }
 
 long  libop::RightUp(long* ret) {
-	*ret = _bkproc->_bkmouse.RightUp();
+	*ret = _bkproc->_bkmouse->RightUp();
 	return S_OK;
 }
 
 long  libop::WheelDown(long* ret) {
-	*ret = _bkproc->_bkmouse.WheelDown();
+	*ret = _bkproc->_bkmouse->WheelDown();
 	return S_OK;
 }
 
 long  libop::WheelUp(long* ret) {
-	*ret = _bkproc->_bkmouse.WheelUp();
+	*ret = _bkproc->_bkmouse->WheelUp();
 	return S_OK;
 }
 
 long  libop::GetKeyState(long vk_code, long* ret) {
-	*ret = _bkproc->_keypad.GetKeyState(vk_code);
+	*ret = _bkproc->_keypad->GetKeyState(vk_code);
 	return S_OK;
 }
 
 long  libop::KeyDown(long vk_code, long* ret) {
-	*ret = _bkproc->_keypad.KeyDown(vk_code);
+	*ret = _bkproc->_keypad->KeyDown(vk_code);
 	return S_OK;
 }
 
@@ -607,14 +615,14 @@ long  libop::KeyDownChar(const wchar_t* vk_code, long* ret) {
 		wstring s = vk_code;
 		wstring2lower(s);
 		long vk = _vkmap.count(s) ? _vkmap[s] : vk_code[0];
-		*ret = _bkproc->_keypad.KeyDown(vk);
+		*ret = _bkproc->_keypad->KeyDown(vk);
 	}
 	
 	return S_OK;
 }
 
 long  libop::KeyUp(long vk_code, long* ret) {
-	*ret = _bkproc->_keypad.KeyUp(vk_code);
+	*ret = _bkproc->_keypad->KeyUp(vk_code);
 	return S_OK;
 }
 
@@ -625,20 +633,20 @@ long  libop::KeyUpChar(const wchar_t* vk_code, long* ret) {
 		wstring s = vk_code;
 		wstring2lower(s);
 		long vk = _vkmap.count(s) ? _vkmap[s] : vk_code[0];
-		*ret = _bkproc->_keypad.KeyUp(vk);
+		*ret = _bkproc->_keypad->KeyUp(vk);
 	}
 	return S_OK;
 }
 
 long  libop::WaitKey(long vk_code, long time_out, long* ret) {
 	if (time_out < 0)time_out = 0;
-	*ret = _bkproc->_keypad.WaitKey(vk_code, time_out);
+	*ret = _bkproc->_keypad->WaitKey(vk_code, time_out);
 	return S_OK;
 }
 
 long  libop::KeyPress(long vk_code, long* ret) {
 	
-		*ret = _bkproc->_keypad.KeyPress(vk_code);
+		*ret = _bkproc->_keypad->KeyPress(vk_code);
 	
 	return S_OK;
 }
@@ -647,10 +655,11 @@ long  libop::KeyPressChar(const wchar_t* vk_code, long* ret) {
 	auto nlen = wcslen(vk_code);
 	*ret = 0;
 	if (nlen > 0) {
+		//setlog(vk_code);
 		wstring s = vk_code;
 		wstring2lower(s);
 		long vk = _vkmap.count(s) ? _vkmap[s] : vk_code[0];
-		*ret = _bkproc->_keypad.KeyPress(vk);
+		*ret = _bkproc->_keypad->KeyPress(vk);
 	}
 	return S_OK;
 }
@@ -664,7 +673,7 @@ long  libop::Capture(long x1, long y1, long x2, long y2, const wchar_t* file_nam
 	
 	if (_bkproc->check_bind()&& _bkproc->RectConvert(x1, y1, x2, y2)) {
 		if (!_bkproc->requestCapture(x1, y1, x2 - x1, y2 - y1, _image_proc->_src)) {
-			setlog("error equestCapture");
+			setlog("error requestCapture");
 			return S_OK;
 		}
 		_image_proc->set_offset(x1, y1);
@@ -894,6 +903,16 @@ long libop::GetScreenDataBmp(long x1, long y1, long x2, long y2, void** data, lo
 	return 0;
 }
 
+
+long libop::GetScreenFrameInfo(long* frame_id, long* time) {
+	FrameInfo info = {};
+	if (_bkproc->IsBind()) {
+		_bkproc->_pbkdisplay->getFrameInfo(info);
+	}
+	*frame_id = info.frameId;
+	*time = info.time;
+	return 0;
+}
 
 
 //设置字库文件

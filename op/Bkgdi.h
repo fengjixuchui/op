@@ -3,18 +3,18 @@
 #define __BKDISPLAY_H_
 #include <thread>
 #include "optype.h"
-#include "bkdisplay.h"
+#include "IDisplay.h"
 struct Image;
-class bkgdi:public bkdisplay
+class bkgdi:public IDisplay
 {
 public:
 	bkgdi();
 	~bkgdi();
 	//绑定
-	long Bind(HWND _hwnd, long render_type) override;
-	long UnBind(HWND hwnd);
+	long BindEx(HWND _hwnd, long render_type) override;
+	//long UnBind(HWND hwnd);
 	//解绑
-	long UnBind() override;
+	long UnBindEx() override;
 	
 	
 	//long updata_screen();
@@ -36,6 +36,8 @@ private:
 	BITMAPINFOHEADER _bih = { 0 };//位图信息头
 	int dx_, dy_;//去除标题栏
 	//bytearray temp_src;
+	FrameInfo m_frameInfo;
+	void fmtFrameInfo(void* dst,HWND hwnd, int w, int h);
 };
 
 #endif

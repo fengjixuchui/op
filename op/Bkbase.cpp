@@ -4,31 +4,42 @@
 #include "helpfunc.h"
 #include "Bkbase.h"
 
-bkbase::bkbase() :_hwnd(0), _is_bind(0), _pbkdisplay(nullptr)
+#include "bkgdi.h"
+#include "bkdx_gl.h"
+
+#include "winkeypad.h"
+bkbase::bkbase() :_hwnd(0), _is_bind(0), _pbkdisplay(nullptr),_bkmouse(new bkmouse), _keypad(new winkeypad)
 {
 	_display_method = std::make_pair<wstring, wstring>(L"screen", L"");
 }
 
 bkbase::~bkbase()
 {
-	_hwnd = NULL;
+	/*_hwnd = NULL;
 	_is_bind = 0;
 	_mode = 0;
-	_bkmouse.UnBind();
+	_bkmouse->UnBind();
 	if (_pbkdisplay) {
 		_pbkdisplay->UnBind();
 		delete _pbkdisplay;
 		_pbkdisplay = nullptr;
-	}
+	}*/
+	UnBindWindow();
+	SAFE_DELETE(_bkmouse);
+	SAFE_DELETE(_keypad);
 }
 
 long bkbase::BindWindow(long hwnd, const wstring& sdisplay, const wstring& smouse, const wstring& skeypad, long mode) {
-
-	_pbkdisplay = nullptr;
-	_hwnd = (HWND)hwnd;
-	long ret;
+	//step 1.避免重复绑定
+	UnBindWindow();
+	//step 2.check hwnd
+	if (!::IsWindow(HWND(hwnd))) {
+		setlog("%s error无效的窗口句柄:%d",__FUNCTION__, hwnd);
+		return 0;
+	}
+	
 	int display, mouse, keypad;
-	//check display
+	//step 3.check display... mode
 	if (sdisplay == L"normal")
 		display = RDT_NORMAL;
 	else if (sdisplay == L"gdi")
@@ -75,59 +86,61 @@ long bkbase::BindWindow(long hwnd, const wstring& sdisplay, const wstring& smous
 		setlog(L"错误的keypad:%s", sdisplay.c_str());
 		return 0;
 	}
-	//check hwnd
-	if (!::IsWindow(_hwnd)) {
-		setlog(L"无效的窗口句柄:%d", _hwnd);
-		ret = 0; _hwnd = 0;
-	}
-	else {
-		set_display_method(L"screen");
-		_mode = mode;
-		_display = display;
-		if (!_bkmouse.Bind(_hwnd, mouse))
-			return 0;
-		if (!_keypad.Bind(_hwnd, keypad))
-			return 0;
-
-		if (display == RDT_NORMAL || GET_RENDER_TYPE(display) == RENDER_TYPE::GDI) {
-			_pbkdisplay = new bkgdi();
-		}
-		else if (GET_RENDER_TYPE(display) == RENDER_TYPE::DX) {
-			_pbkdisplay = new bkdo;
-		}
-		else if (GET_RENDER_TYPE(display) == RENDER_TYPE::OPENGL)
-			_pbkdisplay = new bkdo;
-
-		ret = _pbkdisplay->Bind((HWND)hwnd, display);
-		if (!ret) {
-			_pbkdisplay->UnBind();
-			ret = _pbkdisplay->Bind((HWND)hwnd, display);
-			if (!ret) {
-				SAFE_DELETE(_pbkdisplay);
-				return 0;
-			}
-		}
-		//等待线程创建好
-		Sleep(200);
-
-	}
-	_is_bind = 1;
+	//step 4.init
+	_mode = mode;
 	_display = display;
-	return ret;
+	_hwnd = (HWND)hwnd;
+	set_display_method(L"screen");
+	
+	//step 5. create instance
+	_pbkdisplay = createDisplay(display);
+	_bkmouse = createMouse(mouse);
+	_keypad = createKeypad(keypad);
+
+	if (!_pbkdisplay || !_bkmouse || !_keypad) {
+		setlog("create instance error!");
+		UnBindWindow();
+		return 0;
+	}
+	//step 6.try bind
+	if(!_pbkdisplay->Bind((HWND)hwnd, display)||
+		!_bkmouse->Bind((HWND)hwnd, mouse)||
+		!_keypad->Bind((HWND)hwnd, keypad)) {
+		setlog("try bind error!");
+		UnBindWindow();
+		return 0;
+	}
+
+	//等待线程创建好
+	Sleep(200);
+
+	_is_bind = 1;
+	return 1;
 
 }
 
 long bkbase::UnBindWindow() {
+	//to do
+	//clear ....
 	_hwnd = NULL;
 	_is_bind = 0;
 	_mode = 0;
 
-	_bkmouse.UnBind();
 	if (_pbkdisplay) {
 		_pbkdisplay->UnBind();
-		delete _pbkdisplay;
-		_pbkdisplay = nullptr;
+		SAFE_DELETE(_pbkdisplay);
 	}
+	if (_bkmouse) {
+		_bkmouse->UnBind();
+		SAFE_DELETE(_bkmouse);
+	}
+	if (_keypad) {
+		_keypad->UnBind();
+		SAFE_DELETE(_keypad);
+	}
+	//恢复为前台(默认)
+	_bkmouse = new bkmouse;
+	_keypad = new winkeypad;
 
 	return 1;
 }
@@ -241,11 +254,11 @@ long bkbase::get_width() {
 long bkbase::RectConvert(long& x1, long& y1, long& x2, long& y2) {
 
 
-	if (_pbkdisplay && (_display == RENDER_TYPE::NORMAL || _display == RENDER_TYPE::GDI)) {
+	/*if (_pbkdisplay && (_display == RENDER_TYPE::NORMAL || _display == RENDER_TYPE::GDI)) {
 		x1 += _pbkdisplay->_client_x; y1 += _pbkdisplay->_client_y;
 		x2 += _pbkdisplay->_client_x; y2 += _pbkdisplay->_client_y;
 
-	}
+	}*/
 
 	x2 = std::min<long>(this->get_width(), x2);
 	y2 = std::min<long>(this->get_height(), y2);
@@ -359,10 +372,10 @@ long bkbase::set_display_method(const wstring& method) {
 			if (bih.biHeight < 0) {//正常拷贝
 				int h = -bih.biHeight;
 				_pic.create(bih.biWidth, h);
-				/*setlog("mem w=%d h=%d chk=%d", 
+				/*setlog("mem w=%d h=%d chk=%d",
 					bih.biWidth, h,
 					_pic.size() * 4 == bih.biSizeImage ? 1 : 0);*/
-				memcpy(_pic.pdata, ptr + sizeof(bfh) + sizeof(bih), _pic.size()*4);
+				memcpy(_pic.pdata, ptr + sizeof(bfh) + sizeof(bih), _pic.size() * 4);
 			}
 			else {//倒过来拷贝
 				int h = bih.biHeight;
@@ -394,12 +407,38 @@ bool bkbase::requestCapture(int x1, int y1, int w, int h, Image& img) {
 	else if (method == L"pic" || method == L"mem") {
 		img.create(w, h);
 		for (int i = 0; i < h; i++)
-			memcpy(img.ptr<uchar>(i), _pic.ptr<uchar>(i + y1) + x1*4, w * 4);
+			memcpy(img.ptr<uchar>(i), _pic.ptr<uchar>(i + y1) + x1 * 4, w * 4);
 		return true;
 	}
 	return false;
 
 
 
+}
+
+IDisplay* bkbase::createDisplay(int mode) {
+	IDisplay* pans = 0;
+
+	if (mode == RDT_NORMAL || GET_RENDER_TYPE(mode) == RENDER_TYPE::GDI) {
+		pans = new bkgdi();
+	}
+	else if (GET_RENDER_TYPE(mode) == RENDER_TYPE::DX) {
+		pans = new bkdo;
+	}
+	else if (GET_RENDER_TYPE(mode) == RENDER_TYPE::OPENGL)
+		pans = new bkdo;
+	else
+		pans = 0;
+	return pans;
+}
+
+bkmouse* bkbase::createMouse(int mode) {
+	return new bkmouse();
+	//return 0;
+}
+
+bkkeypad* bkbase::createKeypad(int mode) {
+	return new winkeypad();
+	//return 0;
 }
 

@@ -40,6 +40,7 @@ private:
 	std::map<std::wstring, long> _vkmap;
 	bytearray _screenData;
 	bytearray _screenDataBmp;
+	std::wstring m_opPath;
 public:
 	//---------------基本设置/属性-------------------
 
@@ -55,7 +56,7 @@ public:
 	long GetID(long* ret);
 	//
 	long GetLastError(long* ret);
-	//设置是否弹出错误信息,默认是打开 0为关闭，1为显示为信息框，2为保存到文件
+	//设置是否弹出错误信息,默认是打开 0:关闭，1:显示为信息框，2:保存到文件,3:输出到标准输出
 	long SetShowErrorMsg(long show_type, long* ret);
 	
 	//sleep
@@ -231,6 +232,8 @@ public:
 	long GetScreenData(long x1, long y1, long x2, long y2, void** data,long* ret);
 	//
 	long GetScreenDataBmp(long x1, long y1, long x2, long y2, void** data,long* size, long* ret);
+	//
+	long GetScreenFrameInfo(long* frame_id, long* time);
 	//----------------------ocr-------------------------
 	//设置字库文件
 	long SetDict(long idx, const wchar_t* file_name, long* ret);

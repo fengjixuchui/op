@@ -1,8 +1,8 @@
 #include "stdafx.h"
-#include "bkdisplay.h"
+#include "IDisplay.h"
 #include "globalVar.h"
 #include "helpfunc.h"
-bkdisplay::bkdisplay()
+IDisplay::IDisplay()
 {
 	_hwnd = NULL;
 	_shmem = nullptr;
@@ -14,16 +14,44 @@ bkdisplay::bkdisplay()
 }
 
 
-bkdisplay::~bkdisplay()
+IDisplay::~IDisplay()
 {
+	bind_release();
+	_bind_state = 0;
 }
 
-long bkdisplay::bind_init() {
+long IDisplay::Bind(HWND hwnd, long flag) {
+	//step 1 check window exists
+	if (!::IsWindow(hwnd)) {
+		return 0;
+	}
+	_hwnd = hwnd;
+	//step 2. 准备资源
+	bind_init();
+	//step 3. 调用特定的绑定函数
+
+	_bind_state = BindEx(hwnd, flag) ? 1 : 0;
+
+	return _bind_state;
+
+}
+
+long IDisplay::UnBind() {
+	//setlog("UnBind(");
+	if (_bind_state) {
+		UnBindEx();
+	}
+	bind_release();
+	_bind_state = 0;
+	return 1;
+}
+
+long IDisplay::bind_init() {
 	int res_size = 0;
 	RECT rc;
 	assert(::IsWindow(_hwnd));
 	::GetWindowRect(_hwnd, &rc);
-	res_size = (rc.right - rc.left)*(rc.bottom - rc.top) * 4;
+	res_size = (rc.right - rc.left) * (rc.bottom - rc.top) * 4+sizeof(FrameInfo);
 	wsprintf(_shared_res_name, SHARED_RES_NAME_FORMAT, _hwnd);
 	wsprintf(_mutex_name, MUTEX_NAME_FORMAT, _hwnd);
 	//setlog(L"mem=%s mutex=%s", _shared_res_name, _mutex_name);
@@ -34,20 +62,26 @@ long bkdisplay::bind_init() {
 		_pmutex = new promutex();
 		_pmutex->open_create(_mutex_name);
 	}
-	catch (std::exception&e) {
+	catch (std::exception& e) {
 		setlog("bkdisplay::bind_init() %s exception:%s", _shared_res_name, e.what());
 	}
 
 	return 0;
 }
 
-long bkdisplay::bind_release() {
+long IDisplay::bind_release() {
 	SAFE_DELETE(_shmem);
 	SAFE_DELETE(_pmutex);
 
 	_hwnd = NULL;
 	//_image_data = nullptr;
 	return 0;
+}
+
+void IDisplay::getFrameInfo(FrameInfo& info) {
+	_pmutex->lock();
+	memcpy(&info, _shmem->data<uchar>(), sizeof(FrameInfo));
+	_pmutex->unlock();
 }
 
 //byte* bkdisplay::get_data() {

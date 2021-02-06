@@ -3,19 +3,19 @@
 #define __DXBACKGROUND_H_
 
 
-#include "bkdisplay.h"
+#include "IDisplay.h"
 struct Image;
-class bkdo:public bkdisplay
+class bkdo:public IDisplay
 {
 public:
 	bkdo();
 	~bkdo();
 	//1
-	long Bind(HWND hwnd,long render_type) override;
+	long BindEx(HWND hwnd,long render_type) override;
 
-	long UnBind(HWND hwnd);
+	/*long UnBind(HWND hwnd);*/
 
-	long UnBind() override;
+	long UnBindEx() override;
 
 	virtual bool requestCapture(int x1, int y1, int w, int h, Image& img)override;
 
@@ -25,6 +25,7 @@ public:
 	long UnBindNox();
 private:
 	//blackbone::Process _process;
+	wstring m_opPath;
 
 };
 
