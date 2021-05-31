@@ -7,8 +7,8 @@
 /* at Tue Jan 19 11:14:07 2038
  */
 /* Compiler settings for op.idl:
-    Oicf, W1, Zp8, env=Win32 (32b run), target_arch=X86 8.01.0622 
-    protocol : dce , ms_ext, c_ext, robust
+    Oicf, W1, Zp8, env=Win64 (32b run), target_arch=AMD64 8.01.0622 
+    protocol : all , ms_ext, c_ext, robust
     error checks: allocation ref bounds_check enum stub_data 
     VC __declspec() decoration level: 
          __declspec(uuid()), __declspec(selectany), __declspec(novtable)
@@ -137,6 +137,13 @@ EXTERN_C const IID IID_IOpInterface;
             /* [in] */ LONG endX,
             /* [in] */ LONG endY,
             /* [retval][out] */ BSTR *path) = 0;
+        
+        virtual /* [id] */ HRESULT STDMETHODCALLTYPE FindNearestPos( 
+            /* [in] */ BSTR all_pos,
+            /* [in] */ LONG type,
+            /* [in] */ LONG x,
+            /* [in] */ LONG y,
+            /* [retval][out] */ BSTR *retstr) = 0;
         
         virtual /* [id] */ HRESULT STDMETHODCALLTYPE EnumWindow( 
             /* [in] */ LONG parent,
@@ -510,6 +517,54 @@ EXTERN_C const IID IID_IOpInterface;
             /* [in] */ LONG dir,
             /* [retval][out] */ BSTR *retstr) = 0;
         
+        virtual /* [id] */ HRESULT STDMETHODCALLTYPE FindPicExS( 
+            /* [in] */ LONG x1,
+            /* [in] */ LONG y1,
+            /* [in] */ LONG x2,
+            /* [in] */ LONG y2,
+            /* [in] */ BSTR files,
+            /* [in] */ BSTR delta_color,
+            /* [in] */ DOUBLE sim,
+            /* [in] */ LONG dir,
+            /* [retval][out] */ BSTR *retstr) = 0;
+        
+        virtual /* [id] */ HRESULT STDMETHODCALLTYPE FindColorBlock( 
+            /* [in] */ LONG x1,
+            /* [in] */ LONG y1,
+            /* [in] */ LONG x2,
+            /* [in] */ LONG y2,
+            /* [in] */ BSTR color,
+            /* [in] */ DOUBLE sim,
+            /* [in] */ LONG count,
+            /* [in] */ LONG height,
+            /* [in] */ LONG width,
+            /* [out] */ VARIANT *x,
+            /* [out] */ VARIANT *y,
+            /* [retval][out] */ LONG *ret) = 0;
+        
+        virtual /* [id] */ HRESULT STDMETHODCALLTYPE FindColorBlockEx( 
+            /* [in] */ LONG x1,
+            /* [in] */ LONG y1,
+            /* [in] */ LONG x2,
+            /* [in] */ LONG y2,
+            /* [in] */ BSTR color,
+            /* [in] */ DOUBLE sim,
+            /* [in] */ LONG count,
+            /* [in] */ LONG height,
+            /* [in] */ LONG width,
+            /* [retval][out] */ BSTR *retstr) = 0;
+        
+        virtual /* [id] */ HRESULT STDMETHODCALLTYPE GetResultCount( 
+            /* [in] */ BSTR str,
+            /* [retval][out] */ LONG *ret) = 0;
+        
+        virtual /* [id] */ HRESULT STDMETHODCALLTYPE GetResultPos( 
+            /* [in] */ BSTR str,
+            /* [in] */ LONG index,
+            /* [out] */ VARIANT *x,
+            /* [out] */ VARIANT *y,
+            /* [retval][out] */ LONG *ret) = 0;
+        
         virtual /* [id] */ HRESULT STDMETHODCALLTYPE GetColor( 
             /* [in] */ LONG x,
             /* [in] */ LONG y,
@@ -532,7 +587,6 @@ EXTERN_C const IID IID_IOpInterface;
             /* [in] */ LONG y1,
             /* [in] */ LONG x2,
             /* [in] */ LONG y2,
-            /* [out] */ VARIANT *data,
             /* [retval][out] */ LONG *ret) = 0;
         
         virtual /* [id] */ HRESULT STDMETHODCALLTYPE GetScreenDataBmp( 
@@ -543,6 +597,10 @@ EXTERN_C const IID IID_IOpInterface;
             /* [out] */ VARIANT *data,
             /* [out] */ VARIANT *size,
             /* [retval][out] */ LONG *ret) = 0;
+        
+        virtual /* [id] */ HRESULT STDMETHODCALLTYPE MatchPicName( 
+            /* [in] */ BSTR pic_name,
+            /* [retval][out] */ BSTR *retstr) = 0;
         
         virtual /* [id] */ HRESULT STDMETHODCALLTYPE SetDict( 
             /* [in] */ LONG idx,
@@ -611,6 +669,21 @@ EXTERN_C const IID IID_IOpInterface;
             /* [in] */ BSTR file_name,
             /* [in] */ DOUBLE sim,
             /* [retval][out] */ BSTR *retstr) = 0;
+        
+        virtual /* [id] */ HRESULT STDMETHODCALLTYPE FindLine( 
+            /* [in] */ LONG x1,
+            /* [in] */ LONG y1,
+            /* [in] */ LONG x2,
+            /* [in] */ LONG y2,
+            /* [in] */ BSTR color,
+            /* [in] */ DOUBLE sim,
+            /* [retval][out] */ BSTR *retstr) = 0;
+        
+        virtual /* [id] */ HRESULT STDMETHODCALLTYPE SetMemDict( 
+            /* [in] */ LONG idx,
+            /* [in] */ BSTR data,
+            /* [in] */ LONG size,
+            /* [retval][out] */ LONG *ret) = 0;
         
         virtual /* [id] */ HRESULT STDMETHODCALLTYPE WriteData( 
             /* [in] */ LONG hwnd,
@@ -744,6 +817,14 @@ EXTERN_C const IID IID_IOpInterface;
             /* [in] */ LONG endX,
             /* [in] */ LONG endY,
             /* [retval][out] */ BSTR *path);
+        
+        /* [id] */ HRESULT ( STDMETHODCALLTYPE *FindNearestPos )( 
+            IOpInterface * This,
+            /* [in] */ BSTR all_pos,
+            /* [in] */ LONG type,
+            /* [in] */ LONG x,
+            /* [in] */ LONG y,
+            /* [retval][out] */ BSTR *retstr);
         
         /* [id] */ HRESULT ( STDMETHODCALLTYPE *EnumWindow )( 
             IOpInterface * This,
@@ -1187,6 +1268,59 @@ EXTERN_C const IID IID_IOpInterface;
             /* [in] */ LONG dir,
             /* [retval][out] */ BSTR *retstr);
         
+        /* [id] */ HRESULT ( STDMETHODCALLTYPE *FindPicExS )( 
+            IOpInterface * This,
+            /* [in] */ LONG x1,
+            /* [in] */ LONG y1,
+            /* [in] */ LONG x2,
+            /* [in] */ LONG y2,
+            /* [in] */ BSTR files,
+            /* [in] */ BSTR delta_color,
+            /* [in] */ DOUBLE sim,
+            /* [in] */ LONG dir,
+            /* [retval][out] */ BSTR *retstr);
+        
+        /* [id] */ HRESULT ( STDMETHODCALLTYPE *FindColorBlock )( 
+            IOpInterface * This,
+            /* [in] */ LONG x1,
+            /* [in] */ LONG y1,
+            /* [in] */ LONG x2,
+            /* [in] */ LONG y2,
+            /* [in] */ BSTR color,
+            /* [in] */ DOUBLE sim,
+            /* [in] */ LONG count,
+            /* [in] */ LONG height,
+            /* [in] */ LONG width,
+            /* [out] */ VARIANT *x,
+            /* [out] */ VARIANT *y,
+            /* [retval][out] */ LONG *ret);
+        
+        /* [id] */ HRESULT ( STDMETHODCALLTYPE *FindColorBlockEx )( 
+            IOpInterface * This,
+            /* [in] */ LONG x1,
+            /* [in] */ LONG y1,
+            /* [in] */ LONG x2,
+            /* [in] */ LONG y2,
+            /* [in] */ BSTR color,
+            /* [in] */ DOUBLE sim,
+            /* [in] */ LONG count,
+            /* [in] */ LONG height,
+            /* [in] */ LONG width,
+            /* [retval][out] */ BSTR *retstr);
+        
+        /* [id] */ HRESULT ( STDMETHODCALLTYPE *GetResultCount )( 
+            IOpInterface * This,
+            /* [in] */ BSTR str,
+            /* [retval][out] */ LONG *ret);
+        
+        /* [id] */ HRESULT ( STDMETHODCALLTYPE *GetResultPos )( 
+            IOpInterface * This,
+            /* [in] */ BSTR str,
+            /* [in] */ LONG index,
+            /* [out] */ VARIANT *x,
+            /* [out] */ VARIANT *y,
+            /* [retval][out] */ LONG *ret);
+        
         /* [id] */ HRESULT ( STDMETHODCALLTYPE *GetColor )( 
             IOpInterface * This,
             /* [in] */ LONG x,
@@ -1214,7 +1348,6 @@ EXTERN_C const IID IID_IOpInterface;
             /* [in] */ LONG y1,
             /* [in] */ LONG x2,
             /* [in] */ LONG y2,
-            /* [out] */ VARIANT *data,
             /* [retval][out] */ LONG *ret);
         
         /* [id] */ HRESULT ( STDMETHODCALLTYPE *GetScreenDataBmp )( 
@@ -1226,6 +1359,11 @@ EXTERN_C const IID IID_IOpInterface;
             /* [out] */ VARIANT *data,
             /* [out] */ VARIANT *size,
             /* [retval][out] */ LONG *ret);
+        
+        /* [id] */ HRESULT ( STDMETHODCALLTYPE *MatchPicName )( 
+            IOpInterface * This,
+            /* [in] */ BSTR pic_name,
+            /* [retval][out] */ BSTR *retstr);
         
         /* [id] */ HRESULT ( STDMETHODCALLTYPE *SetDict )( 
             IOpInterface * This,
@@ -1303,6 +1441,23 @@ EXTERN_C const IID IID_IOpInterface;
             /* [in] */ BSTR file_name,
             /* [in] */ DOUBLE sim,
             /* [retval][out] */ BSTR *retstr);
+        
+        /* [id] */ HRESULT ( STDMETHODCALLTYPE *FindLine )( 
+            IOpInterface * This,
+            /* [in] */ LONG x1,
+            /* [in] */ LONG y1,
+            /* [in] */ LONG x2,
+            /* [in] */ LONG y2,
+            /* [in] */ BSTR color,
+            /* [in] */ DOUBLE sim,
+            /* [retval][out] */ BSTR *retstr);
+        
+        /* [id] */ HRESULT ( STDMETHODCALLTYPE *SetMemDict )( 
+            IOpInterface * This,
+            /* [in] */ LONG idx,
+            /* [in] */ BSTR data,
+            /* [in] */ LONG size,
+            /* [retval][out] */ LONG *ret);
         
         /* [id] */ HRESULT ( STDMETHODCALLTYPE *WriteData )( 
             IOpInterface * This,
@@ -1390,6 +1545,9 @@ EXTERN_C const IID IID_IOpInterface;
 
 #define IOpInterface_AStarFindPath(This,mapWidth,mapHeight,disable_points,beginX,beginY,endX,endY,path)	\
     ( (This)->lpVtbl -> AStarFindPath(This,mapWidth,mapHeight,disable_points,beginX,beginY,endX,endY,path) ) 
+
+#define IOpInterface_FindNearestPos(This,all_pos,type,x,y,retstr)	\
+    ( (This)->lpVtbl -> FindNearestPos(This,all_pos,type,x,y,retstr) ) 
 
 #define IOpInterface_EnumWindow(This,parent,title,class_name,filter,retstr)	\
     ( (This)->lpVtbl -> EnumWindow(This,parent,title,class_name,filter,retstr) ) 
@@ -1601,6 +1759,21 @@ EXTERN_C const IID IID_IOpInterface;
 #define IOpInterface_FindPicEx(This,x1,y1,x2,y2,files,delta_color,sim,dir,retstr)	\
     ( (This)->lpVtbl -> FindPicEx(This,x1,y1,x2,y2,files,delta_color,sim,dir,retstr) ) 
 
+#define IOpInterface_FindPicExS(This,x1,y1,x2,y2,files,delta_color,sim,dir,retstr)	\
+    ( (This)->lpVtbl -> FindPicExS(This,x1,y1,x2,y2,files,delta_color,sim,dir,retstr) ) 
+
+#define IOpInterface_FindColorBlock(This,x1,y1,x2,y2,color,sim,count,height,width,x,y,ret)	\
+    ( (This)->lpVtbl -> FindColorBlock(This,x1,y1,x2,y2,color,sim,count,height,width,x,y,ret) ) 
+
+#define IOpInterface_FindColorBlockEx(This,x1,y1,x2,y2,color,sim,count,height,width,retstr)	\
+    ( (This)->lpVtbl -> FindColorBlockEx(This,x1,y1,x2,y2,color,sim,count,height,width,retstr) ) 
+
+#define IOpInterface_GetResultCount(This,str,ret)	\
+    ( (This)->lpVtbl -> GetResultCount(This,str,ret) ) 
+
+#define IOpInterface_GetResultPos(This,str,index,x,y,ret)	\
+    ( (This)->lpVtbl -> GetResultPos(This,str,index,x,y,ret) ) 
+
 #define IOpInterface_GetColor(This,x,y,ret)	\
     ( (This)->lpVtbl -> GetColor(This,x,y,ret) ) 
 
@@ -1613,11 +1786,14 @@ EXTERN_C const IID IID_IOpInterface;
 #define IOpInterface_FreePic(This,Pic_name,ret)	\
     ( (This)->lpVtbl -> FreePic(This,Pic_name,ret) ) 
 
-#define IOpInterface_GetScreenData(This,x1,y1,x2,y2,data,ret)	\
-    ( (This)->lpVtbl -> GetScreenData(This,x1,y1,x2,y2,data,ret) ) 
+#define IOpInterface_GetScreenData(This,x1,y1,x2,y2,ret)	\
+    ( (This)->lpVtbl -> GetScreenData(This,x1,y1,x2,y2,ret) ) 
 
 #define IOpInterface_GetScreenDataBmp(This,x1,y1,x2,y2,data,size,ret)	\
     ( (This)->lpVtbl -> GetScreenDataBmp(This,x1,y1,x2,y2,data,size,ret) ) 
+
+#define IOpInterface_MatchPicName(This,pic_name,retstr)	\
+    ( (This)->lpVtbl -> MatchPicName(This,pic_name,retstr) ) 
 
 #define IOpInterface_SetDict(This,idx,file_name,ret)	\
     ( (This)->lpVtbl -> SetDict(This,idx,file_name,ret) ) 
@@ -1645,6 +1821,12 @@ EXTERN_C const IID IID_IOpInterface;
 
 #define IOpInterface_OcrAutoFromFile(This,file_name,sim,retstr)	\
     ( (This)->lpVtbl -> OcrAutoFromFile(This,file_name,sim,retstr) ) 
+
+#define IOpInterface_FindLine(This,x1,y1,x2,y2,color,sim,retstr)	\
+    ( (This)->lpVtbl -> FindLine(This,x1,y1,x2,y2,color,sim,retstr) ) 
+
+#define IOpInterface_SetMemDict(This,idx,data,size,ret)	\
+    ( (This)->lpVtbl -> SetMemDict(This,idx,data,size,ret) ) 
 
 #define IOpInterface_WriteData(This,hwnd,address,data,size,ret)	\
     ( (This)->lpVtbl -> WriteData(This,hwnd,address,data,size,ret) ) 

@@ -4,6 +4,7 @@
 #include <fstream>
 #include <bitset>
 #include <algorithm>
+#include <sstream>
 ImageProc::ImageProc()
 {
 	_curr_idx = 0;
@@ -26,7 +27,7 @@ long ImageProc::Capture(const std::wstring& file) {
 long ImageProc::CmpColor(long x, long y, const std::wstring& scolor, double sim) {
 	std::vector<color_df_t> vcolor;
 	str2colordfs(scolor, vcolor);
-	return ImageBase::CmpColor(x, y, vcolor, sim);
+	return ImageBase::CmpColor(_src.at<color_t>(0,0), vcolor, sim);
 
 
 }
@@ -90,33 +91,49 @@ long ImageProc::FindMultiColorEx(const wstring& first_color, const wstring& offs
 	}
 	return ImageBase::FindMultiColorEx(vfirst_color, voffset_cr, sim, dir, retstr);
 }
-//ͼ�ζ�λ
+//图形定位
 long ImageProc::FindPic(const std::wstring& files, const wstring& delta_colors, double sim, long dir, long& x, long& y) {
 	vector<Image*>vpic;
 	//vector<color_t> vcolor;
 	color_t dfcolor;
-	files2mats(files, vpic);
+	vector<std::wstring> vpic_name;
+	files2mats(files, vpic, vpic_name);
 	dfcolor.str2color(delta_colors);
 	//str2colors(delta_colors, vcolor);
 	sim = 0.5 + sim / 2;
 	long ret = ImageBase::FindPic(vpic, dfcolor, sim, x, y);
-	//��������
+	//清理缓存
 	if (!_enable_cache)
 		_pic_cache.clear();
 	return ret;
 }
 //
-long ImageProc::FindPicEx(const std::wstring& files, const wstring& delta_colors, double sim, long dir, wstring& retstr) {
+long ImageProc::FindPicEx(const std::wstring& files, const wstring& delta_colors, double sim, long dir, wstring& retstr, bool returnID) {
 	vector<Image*>vpic;
+	vpoint_desc_t vpd;
 	//vector<color_t> vcolor;
 	color_t dfcolor;
-	files2mats(files, vpic);
+	vector<std::wstring> vpic_name;
+	files2mats(files, vpic,vpic_name);
 	dfcolor.str2color(delta_colors);
 	sim = 0.5 + sim / 2;
-	long ret = ImageBase::FindPicEx(vpic, dfcolor, sim, retstr);
-	//��������
+	long ret = ImageBase::FindPicEx(vpic, dfcolor, sim, vpd);
+	std::wstringstream ss(std::wstringstream::in);
+	if (returnID) {
+		for (auto& it : vpd) {
+			ss << it.id << L"," << it.pos << L"|";
+		}
+	}
+	else {
+		for (auto& it : vpd) {
+			ss << vpic_name[it.id] << L"," << it.pos << L"|";
+		}
+	}
+	//清理缓存
 	if (!_enable_cache)
 		_pic_cache.clear();
+	retstr = ss.str();
+	if(vpd.size()>=2)retstr.pop_back();
 	return ret;
 }
 
@@ -138,6 +155,17 @@ long ImageProc::SetDict(int idx, const wstring& file_name) {
 	return _dicts[idx].empty() ? 0 : 1;
 
 }
+
+
+long ImageProc::SetMemDict(int idx, void* data, long size) {
+	if (idx < 0 || idx >= _max_dict)
+		return 0;
+	_dicts[idx].clear();
+	_dicts[idx].read_memory_dict_dm( (const char*)data,size );
+	return _dicts[idx].empty() ? 0 : 1;
+
+}
+
 
 long ImageProc::UseDict(int idx) {
 	if (idx < 0 || idx >= _max_dict)
@@ -205,23 +233,83 @@ void ImageProc::str2colors(const wstring& color, std::vector<color_t>& vcolor) {
 	}
 }
 
-void ImageProc::files2mats(const wstring& files, std::vector<Image*>& vpic) {
-	std::vector<wstring>vstr, vstr2;
+long ImageProc::LoadPic(const wstring& files) {
+	//std::vector<wstring>vstr, vstr2;
+	std::vector<wstring> vstr;
+	int loaded = 0;
+	split(files, vstr, L"|");
+	wstring tp;
+	for (auto& it : vstr) {
+		//路径转化
+		if (!Path2GlobalPath(it, _curr_path, tp))
+			continue;
+		//先在缓存中查找
+		if ( !_pic_cache.count(tp)) {
+			_pic_cache[tp].read(tp.data());
+		}
+		//已存在于缓存中的文件也算加载成功
+		loaded++;
+	}
+	return loaded;
+}
+
+long ImageProc::FreePic(const wstring& files) {
+	std::vector<wstring> vstr;
+	int loaded = 0;
+	split(files, vstr, L"|");
+	wstring tp;
+	for (auto& it : vstr) {
+		//看当前目录
+		auto cache_it = _pic_cache.find( it );
+		//没查到再看一下资源目录
+		if (cache_it == _pic_cache.end()) {
+			cache_it = _pic_cache.find(_curr_path + L"\\" + it);
+		}
+		//查到了就释放
+		if (cache_it != _pic_cache.end()) {
+			cache_it->second.release();
+			_pic_cache.erase(cache_it);
+			loaded++;
+		}
+	}
+	return loaded;
+}
+
+long ImageProc::LoadMemPic(const wstring& file_name, void* data, long size) {
+	try {
+		if (!_pic_cache.count(file_name)) {
+			_pic_cache[file_name].read(data, size);
+		}
+	}
+	catch (...){
+		return 0;
+	}
+	return 1;
+}
+
+void ImageProc::files2mats(const wstring& files, std::vector<Image*>& vpic, std::vector<wstring>& vstr) {
+	//std::vector<wstring>vstr, vstr2;
 	Image* pm;
 	vpic.clear();
 	split(files, vstr, L"|");
 	wstring tp;
 	for (auto& it : vstr) {
-		//·��ת��
-		if (!Path2GlobalPath(it, _curr_path, tp))
-			continue;
-		//���ڻ����в���
-		if (_pic_cache.count(tp)) {
-			pm = &_pic_cache[tp];
+		//先在缓存中查找是否已加载，包括从内存中加载的文件
+		if (_pic_cache.count(it)) {
+			pm = &_pic_cache[it];
 		}
 		else {
-			_pic_cache[tp].read(tp.data());
-			pm = &_pic_cache[tp];
+			//路径转化
+			if (!Path2GlobalPath(it, _curr_path, tp))
+				continue;
+			//再检测一次，包括绝对路径的文件
+			if (_pic_cache.count(tp)) {
+				pm = &_pic_cache[tp];
+			}
+			else {
+				_pic_cache[tp].read(tp.data());
+				pm = &_pic_cache[tp];
+			}
 		}
 		vpic.push_back(pm);
 	}
@@ -238,7 +326,7 @@ long ImageProc::OcrEx(const wstring& color, double sim, std::wstring& out_str) {
 	}
 	if (sim < 0. || sim>1.)
 		sim = 1.;
-	long s;
+
 	return ImageBase::OcrEx(_dicts[_curr_idx], sim, out_str);
 }
 
@@ -303,7 +391,7 @@ long ImageProc::OcrFromFile(const wstring& files, const wstring& color, double s
 		}
 		if (sim < 0. || sim>1.)
 			sim = 1.;
-		long s;
+		
 		return ImageBase::Ocr(_dicts[_curr_idx], sim, retstr);
 	}
 	return 0;
@@ -323,4 +411,22 @@ long ImageProc::OcrAutoFromFile(const wstring& files, double sim, std::wstring& 
 		return ImageBase::Ocr(_dicts[_curr_idx], sim, retstr);
 	}
 	return 0;
+}
+
+long ImageProc::FindLine(const wstring& color, double sim, wstring& retStr) {
+	retStr.clear();
+	vector<color_df_t> colors;
+	if (str2colordfs(color, colors) == 0) {
+		bgr2binary(colors);
+	}
+	else {
+		bgr2binarybk(colors);
+	}
+	if (sim < 0. || sim>1.)
+		sim = 1.;
+	
+	_src.write(L"_src.bmp");
+	_gray.write(L"gray.bmp");
+	_binary.write(L"_binary.bmp");
+	return ImageBase::FindLine(sim,retStr);
 }
